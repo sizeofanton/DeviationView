@@ -2,7 +2,7 @@
 
 A View to show some parameter deviation between -50 cents and 50 cents.
 
- [![License: GPL](https://img.shields.io/badge/License-GPL-blue)](https://gnu.org/licenses/gpl-3.0.txt)[![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19)
+ ![License: GPL](https://img.shields.io/badge/License-GPL-blue) [![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19) [![](https://jitpack.io/v/sizeofanton/DeviationView.svg)](https://jitpack.io/#sizeofanton/DeviationView)
 
 <img src="./readme/1.gif" width="300" style="float:left"/>
 
