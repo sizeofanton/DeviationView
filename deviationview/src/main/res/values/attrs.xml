@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="DeviationView">
+        <attr name="orientation" format="integer">
+            <enum name="vertical" value="0" />
+            <enum name="horizontal" value="1" />
+        </attr>
+
+        <attr name="scaleBgColor" format="color" />
+        <attr name="scaleCentralColor" format="color" />
+        <attr name="scaleFrontierColor" format="color" />
+        <attr name="scaleContourColor" format="color" />
+        <attr name="scaleFontColor" format="color" />
+        <attr name="scalePointerColor" format="color" />
+        <attr name="scaleContourVisibility" format="boolean" />
+        <attr name="scalePointerVisibility" format="boolean" />
+    </declare-styleable>
+</resources>
