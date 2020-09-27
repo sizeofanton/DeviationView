@@ -10,7 +10,7 @@ A View to show some parameter deviation between -50 cents and 50 cents.
 
 ### Add to Gradle
 
-Add this yo your project level `build.gradle` file:
+Add this to your project level `build.gradle` file:
 
 ```gradle
 repositories {
@@ -18,7 +18,7 @@ repositories {
 }
 ```
 
-Abd then add this to your module level `build.gradle` file:
+And then add this to your module level `build.gradle` file:
 
 ```gradle
 dependencies {
