@@ -14,12 +14,65 @@ class DeviationView @JvmOverloads constructor(
     defStyleAttrs: Int = 0
 ) : View(context, attrs, defStyleAttrs) {
 
-    data class Line(var x1: Float, var y1: Float, var x2: Float, var y2: Float)
+    data class Line(
+        var x1: Float,
+        var y1: Float,
+        var x2: Float,
+        var y2: Float
+    )
 
-    private var orientation: Int = 0
+    companion object {
+        const val POSITION_UPPER_MAX = 50
+        const val POSITION_LOWER_MAX = -50
+        const val POSITION_CENTER = 0
 
-    private var primaryLineWidth = 20.0f
-    private var secondaryLineWidth = 10.0f
+        private const val VERTICAL_ORIENTATION = 0
+        private const val HORIZONTAL_ORIENTATION = 1
+
+        private const val DEFAULT_PRIMARY_LINE_WIDTH = 20.0f
+        private const val DEFAULT_SECONDARY_LINE_WIDTH = 10.0f
+
+        private const val DEFAULT_TEXT_SIZE = 50.0f
+        private const val POSITION_PROPORTION = 50.0f
+
+        // TODO better naming
+        private const val VERTICAL_TOTAL_PARTS = 22.0f // TODO
+        private const val VERTICAL_CENTRAL_PART = VERTICAL_TOTAL_PARTS / 2 // TODO
+        private const val VERTICAL_AVAILABLE_PARTS = VERTICAL_CENTRAL_PART - 1 // TODO
+        private const val VERTICAL_BACKGROUND_LIMIT = VERTICAL_TOTAL_PARTS - 1 // TODO
+        private const val VERTICAL_FRONTIER_LIMIT_TOP = VERTICAL_AVAILABLE_PARTS - 1
+        private const val VERTICAL_FRONTIER_LIMIT_BOTTOM = VERTICAL_CENTRAL_PART + 2
+
+        private const val HORIZONTAL_TOTAL_PARTS = 11.0f // TODO
+        private const val HORIZONTAL_END_PART = 9.0f // TODO
+        private const val HORIZONTAL_FRONTIER_LIMIT_LEFT = 9.0f
+        private const val HORIZONTAL_FRONTIER_LIMIT_RIGHT = 13.0f
+        private const val HORIZONTAL_FRONTIER_LIMIT_TOP = 1.0f
+        private const val HORIZONTAL_FRONTIER_LIMIT_BOTTOM = 9.0f
+
+        private const val NUMBER_OF_MARKS = 10
+        private const val LEFT_LARGE_MARK_X1 = 1
+        private const val LEFT_LARGE_MARK_X2 = 2
+        private const val RIGHT_LARGE_MARK_X1 = 8
+        private const val RIGHT_LARGE_MARK_X2 = 9
+        private const val LEFT_SMALL_MARK_X1 = 1.0f
+        private const val LEFT_SMALL_MARK_X2 = 1.5f
+        private const val RIGHT_SMALL_MARK_X1 = 8.5f
+        private const val RIGHT_SMALL_MARK_X2 = 9f
+
+        private const val VERTICAL_PRIMARY_LINE_PROPORTION = 107.5f
+        private const val VERTICAL_SECONDARY_LINE_PROPORTION = 215.0f
+        private const val HORIZONTAL_PRIMARY_LINE_PROPORTION = 53.75f
+        private const val HORIZONTAL_SECONDARY_LINE_PROPORTION = 107.5f
+
+        private const val VERTICAL_FONT_PROPORTION = 42.0f
+        private const val HORIZONTAL_FONT_PROPORTION = 21.0f
+    }
+
+    private var orientation: Int = VERTICAL_ORIENTATION
+
+    private var primaryLineWidth = DEFAULT_PRIMARY_LINE_WIDTH
+    private var secondaryLineWidth = DEFAULT_SECONDARY_LINE_WIDTH
 
     private var labels = resources.getStringArray(R.array.labels)
 
@@ -36,7 +89,7 @@ class DeviationView @JvmOverloads constructor(
         strokeWidth = secondaryLineWidth
     }
     private val fontPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 50f
+        textSize = DEFAULT_TEXT_SIZE
         style = Paint.Style.STROKE
     }
     private val pointerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -55,7 +108,7 @@ class DeviationView @JvmOverloads constructor(
             invalidate()
         }
 
-    var contourVisible = false
+    private var contourVisible = false
         set(value) {
             field = value
             invalidate()
@@ -72,7 +125,7 @@ class DeviationView @JvmOverloads constructor(
     init {
         if (attrs != null) {
             val fromXml = getContext().obtainStyledAttributes(attrs, R.styleable.DeviationView)
-            orientation = fromXml.getInt(R.styleable.DeviationView_orientation, 0)
+            orientation = fromXml.getInt(R.styleable.DeviationView_orientation, VERTICAL_ORIENTATION)
             backgroundPaint.color = fromXml.getInt(
                 R.styleable.DeviationView_scaleBgColor,
                 ContextCompat.getColor(getContext(), R.color.scaleBackgroundColor)
@@ -108,38 +161,41 @@ class DeviationView @JvmOverloads constructor(
 
             fromXml.recycle()
         }
-        if (orientation == 1) labels = labels.reversed().toTypedArray()
+        if (orientation == HORIZONTAL_ORIENTATION) labels = labels.reversed().toTypedArray()
     }
 
 
     private fun setPosition(pos: Int) {
-        if (pos !in -50..50)
-            throw IllegalArgumentException("Pointer position must be in -50..50 range")
-        val pointerPositionInner = if (orientation == 0) {
+        if (pos !in -POSITION_LOWER_MAX..POSITION_UPPER_MAX)
+            throw IllegalArgumentException("Pointer position must be in " +
+                    "$POSITION_LOWER_MAX..$POSITION_UPPER_MAX range")
+        val pointerPositionInner = if (orientation == VERTICAL_ORIENTATION) {
             when (pos) {
-                0 -> 11.0f / 22.0f
-                else -> (11.0f / 22.0f) - (10.0f / 22.0f * pos / 50.0f)
+                POSITION_CENTER -> VERTICAL_CENTRAL_PART / VERTICAL_TOTAL_PARTS
+                else -> (VERTICAL_CENTRAL_PART / VERTICAL_TOTAL_PARTS) -
+                        (VERTICAL_AVAILABLE_PARTS / VERTICAL_TOTAL_PARTS * pos / POSITION_PROPORTION)
             }
         } else {
             when (pos) {
-                0 -> 11.0f / 22.0f
-                else -> (11.0f / 22.0f) + (10.0f / 22.0f * pos / 50.0f)
+                POSITION_CENTER -> VERTICAL_CENTRAL_PART / VERTICAL_TOTAL_PARTS
+                else -> (VERTICAL_CENTRAL_PART / VERTICAL_TOTAL_PARTS) +
+                        (VERTICAL_AVAILABLE_PARTS / VERTICAL_TOTAL_PARTS * pos / POSITION_PROPORTION)
             }
         }
 
-        if (orientation == 0) {
+        if (orientation == VERTICAL_ORIENTATION) {
             pointerLine.apply {
-                x1 = width.toFloat() / 11
+                x1 = width.toFloat() / VERTICAL_TOTAL_PARTS
                 y1 = pointerPositionInner * height
-                x2 = 9.0f * width.toFloat() / 11
+                x2 = HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS
                 y2 = pointerPositionInner * height
             }
         } else {
             pointerLine.apply {
                 x1 = pointerPositionInner * width
-                y1 = height.toFloat() / 11
+                y1 = height.toFloat() / HORIZONTAL_TOTAL_PARTS
                 x2 = pointerPositionInner * width
-                y2 = 9f * height / 11
+                y2 = HORIZONTAL_END_PART * height / HORIZONTAL_TOTAL_PARTS
             }
         }
 
@@ -215,239 +271,253 @@ class DeviationView @JvmOverloads constructor(
     }
 
     private fun calculateRects() {
-        backgroundRect = if (orientation == 0) Rect(
-            (width.toFloat() / 11).toInt(),
-            (height.toFloat() / 22).toInt(),
-            (9 * width.toFloat() / 11).toInt(),
-            (21 * height.toFloat() / 22).toInt()
+        backgroundRect = if (orientation == VERTICAL_ORIENTATION) Rect(
+            (width.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt(),
+            (height.toFloat() / VERTICAL_TOTAL_PARTS).toInt(),
+            (HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt(),
+            (VERTICAL_BACKGROUND_LIMIT * height.toFloat() / VERTICAL_TOTAL_PARTS).toInt()
         )
         else Rect(
-            (width.toFloat() / 22).toInt(),
-            (height.toFloat() / 11).toInt(),
-            (21 * width.toFloat() / 22).toInt(),
-            (9 * height.toFloat() / 11).toInt()
+            (width.toFloat() / VERTICAL_TOTAL_PARTS).toInt(),
+            (height.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt(),
+            (VERTICAL_BACKGROUND_LIMIT * width.toFloat() / VERTICAL_TOTAL_PARTS).toInt(),
+            (HORIZONTAL_END_PART * height.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt()
         )
 
-        frontierRect = if (orientation == 0) Rect(
-            (width.toFloat() / 11).toInt(),
-            (9 * height.toFloat() / 22).toInt(),
-            (9 * width.toFloat() / 11).toInt(),
-            (13 * height.toFloat() / 22).toInt()
+        frontierRect = if (orientation == VERTICAL_ORIENTATION) Rect(
+            (width.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt(),
+            (VERTICAL_FRONTIER_LIMIT_TOP * height.toFloat() / VERTICAL_TOTAL_PARTS).toInt(),
+            (HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt(),
+            (VERTICAL_FRONTIER_LIMIT_BOTTOM * height.toFloat() / VERTICAL_TOTAL_PARTS).toInt()
         ) else Rect(
-            (9 * width.toFloat() / 22).toInt(),
-            (1 * height.toFloat() / 11).toInt(),
-            (13 * width.toFloat() / 22).toInt(),
-            (9 * height.toFloat() / 11).toInt()
+            (HORIZONTAL_FRONTIER_LIMIT_LEFT * width.toFloat() / VERTICAL_TOTAL_PARTS).toInt(),
+            (HORIZONTAL_FRONTIER_LIMIT_TOP * height.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt(),
+            (HORIZONTAL_FRONTIER_LIMIT_RIGHT * width.toFloat() / VERTICAL_TOTAL_PARTS).toInt(),
+            (HORIZONTAL_FRONTIER_LIMIT_BOTTOM * height.toFloat() / HORIZONTAL_TOTAL_PARTS).toInt()
         )
     }
 
     private fun calculateLines() {
-        centralLine = if (orientation == 0 ) Line(
-            width.toFloat() / 11,
-            11 * height.toFloat() / 22,
-            9 * width.toFloat() / 11,
-            11 * height.toFloat() / 22
+        centralLine = if (orientation == VERTICAL_ORIENTATION) Line(
+            width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_CENTRAL_PART * height.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_CENTRAL_PART * height.toFloat() / VERTICAL_TOTAL_PARTS
         ) else Line (
-            11 * width.toFloat() / 22,
-            height.toFloat() / 11,
-            11 * width.toFloat() / 22,
-            9 * height.toFloat() / 11
+            VERTICAL_CENTRAL_PART * width.toFloat() / VERTICAL_TOTAL_PARTS,
+            height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_CENTRAL_PART * width.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * height.toFloat() / HORIZONTAL_TOTAL_PARTS
         )
 
         if (marksLines.isNotEmpty()) marksLines.clear()
-        if (orientation == 0) {
-            for (i in 0..9)
-                marksLines.add(
-                    Line(
-                    width.toFloat() / 11,
-                    (2 + 2 * i) * height.toFloat() / 22,
-                    2 * width.toFloat() / 11,
-                    (2 + 2 * i) * height.toFloat() / 22
-                    )
-                )
-            for (i in 0..9)
-                marksLines.add(
-                    Line(
-                    8 * width.toFloat() / 11,
-                    (2 + 2 * i) * height.toFloat() / 22,
-                    9 * width.toFloat() / 11,
-                    (2 + 2 * i) * height.toFloat() / 22
-                    )
-                )
-            for (i in 1..10)
-                marksLines.add(
-                    Line(
-                    width.toFloat() / 11,
-                    (2f * i + 0.5f) * height.toFloat() / 22,
-                    1.5f * width.toFloat() / 11,
-                    (2f * i + 0.5f) * height.toFloat() / 22
-                    )
-                )
-            for (i in 1..10)
-                marksLines.add(
-                    Line(
-                    width.toFloat() / 11,
-                    (2f * i - 0.5f) * height.toFloat() / 22,
-                    1.5f * width.toFloat() / 11,
-                    (2f * i - 0.5f) * height.toFloat() / 22
-                    )
-                )
-            for (i in 1..10)
-                marksLines.add(
-                    Line(
-                    8.5f * width.toFloat() / 11,
-                    (2f * i + 0.5f) * height.toFloat() / 22,
-                    9f * width.toFloat() / 11,
-                    (2f * i + 0.5f) * height.toFloat() / 22
-                    )
-                )
-            for (i in 1..10)
-                marksLines.add(
-                    Line(
-                    8.5f * width.toFloat() / 11,
-                    (2f * i - 0.5f) * height.toFloat() / 22,
-                    9f * width.toFloat() / 11,
-                    (2f * i - 0.5f) * height.toFloat() / 22
-                    )
-                )
-
-            contourLines[0] = Line(
-                width.toFloat() / 11,
-                height.toFloat() / 22,
-                9 * width.toFloat() / 11,
-                height.toFloat() / 22
-            )
-            contourLines[1] = Line(
-                9 * width.toFloat() / 11,
-                height.toFloat() / 22,
-                9 * width.toFloat() / 11,
-                21 * height.toFloat() / 22
-            )
-            contourLines[2] = Line(
-                9 * width.toFloat() / 11,
-                21 * height.toFloat() / 22,
-                width.toFloat() / 11,
-                21 * height.toFloat() / 22
-            )
-            contourLines[3] = Line(
-                width.toFloat() / 11,
-                21 * height.toFloat() / 22,
-                width.toFloat() / 11,
-                height.toFloat() / 22
-            )
-
-        } else {
-            for (i in 0..9) {
-                marksLines.add(
-                    Line(
-                    (2 + 2 * i) * width.toFloat() / 22,
-                    height.toFloat() / 11,
-                    (2 + 2 * i) * width.toFloat() / 22,
-                    2f * height.toFloat() / 11
-                    )
-                )
-            }
-            for (i in 0..9) {
-                marksLines.add(
-                    Line(
-                    (2 + 2 * i) * width.toFloat() / 22,
-                    8f * height.toFloat() / 11,
-                    (2 + 2 * i) * width.toFloat() / 22,
-                    9f * height.toFloat() / 11
-                    )
-                )
-            }
-            for (i in 1..10) {
-                marksLines.add(
-                    Line(
-                    (2f * i - 0.5f) * width.toFloat() / 22,
-                    height.toFloat() / 11,
-                    (2f * i - 0.5f) * width.toFloat() / 22,
-                    1.5f * height.toFloat() / 11
-                    )
-                )
-            }
-
-            for (i in 1..10) {
-                marksLines.add(
-                    Line(
-                    (2f * i - 0.5f) * width.toFloat() / 22,
-                    8.5f * height.toFloat() / 11,
-                    (2f * i - 0.5f) * width.toFloat() / 22,
-                    9f * height.toFloat() / 11
-                    )
-                )
-            }
-
-            for (i in 1..10) {
-                marksLines.add(
-                    Line(
-                    (2f * i + 0.5f) * width.toFloat() / 22,
-                    height.toFloat() / 11,
-                    (2f * i + 0.5f) * width.toFloat() / 22,
-                    1.5f * height.toFloat() / 11
-                    )
-                )
-            }
-
-            for (i in 1..10) {
-                marksLines.add(
-                    Line(
-                    (2f * i + 0.5f) * width.toFloat() / 22,
-                    8.5f * height.toFloat() / 11,
-                    (2f * i + 0.5f) * width.toFloat() / 22,
-                    9f * height.toFloat() / 11
-                    )
-                )
-            }
-
-            contourLines[0] = Line(
-                width.toFloat() / 22,
-                height.toFloat() / 11,
-                21 * width.toFloat() / 22,
-                height.toFloat() / 11
-            )
-            contourLines[1] = Line(
-                21 * width.toFloat() / 22,
-                height.toFloat() / 11,
-                21 * width.toFloat() / 22,
-                9 * height.toFloat() / 11
-            )
-            contourLines[2] = Line(
-                21 * width.toFloat() / 22,
-                9 * height.toFloat() / 11,
-                width.toFloat() / 22,
-                9 * height.toFloat() / 11
-            )
-            contourLines[3] = Line(
-                width.toFloat() / 22,
-                9 * height.toFloat() / 11,
-                width.toFloat() / 22,
-                height.toFloat() / 11
-            )
-        }
+        if (orientation == VERTICAL_ORIENTATION) calculateVerticalMarkLines()
+        else calculateHorizontalMarkLines()
     }
 
+    private fun calculateLargeMarkOffset(i: Int) = 2 + 2 * i
+    private fun calculateOddSmallMarkOffset(i: Int) = 2f * i + 0.5f
+    private fun calculateEvenSmallMarkOffset(i: Int) = 2f * i - 0.5f
+    private fun calculateVerticalMarkLines() {
+        for (i in 0 until NUMBER_OF_MARKS)
+            marksLines.add(
+                Line(
+                    LEFT_LARGE_MARK_X1 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateLargeMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_LARGE_MARK_X2 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateLargeMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS
+                )
+            )
+        for (i in 0 until NUMBER_OF_MARKS)
+            marksLines.add(
+                Line(
+                    RIGHT_LARGE_MARK_X1 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateLargeMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_LARGE_MARK_X2 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateLargeMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS
+                )
+            )
+        for (i in 1..NUMBER_OF_MARKS)
+            marksLines.add(
+                Line(
+                    LEFT_SMALL_MARK_X1 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateOddSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_SMALL_MARK_X2 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateOddSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS
+                )
+            )
+        for (i in 1..NUMBER_OF_MARKS)
+            marksLines.add(
+                Line(
+                    LEFT_SMALL_MARK_X1 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateEvenSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_SMALL_MARK_X2 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateEvenSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS
+                )
+            )
+        for (i in 1..NUMBER_OF_MARKS)
+            marksLines.add(
+                Line(
+                    RIGHT_SMALL_MARK_X1 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateOddSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_SMALL_MARK_X2 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateOddSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS
+                )
+            )
+        for (i in 1..NUMBER_OF_MARKS)
+            marksLines.add(
+                Line(
+                    RIGHT_SMALL_MARK_X1 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateEvenSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_SMALL_MARK_X2 * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateEvenSmallMarkOffset(i) * height.toFloat() / VERTICAL_TOTAL_PARTS
+                )
+            )
+
+        contourLines[0] = Line(
+            width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            height.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            height.toFloat() / VERTICAL_TOTAL_PARTS
+        )
+        contourLines[1] = Line(
+            HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            height.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_BACKGROUND_LIMIT * height.toFloat() / VERTICAL_TOTAL_PARTS
+        )
+        contourLines[2] = Line(
+            HORIZONTAL_END_PART * width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_BACKGROUND_LIMIT * height.toFloat() / VERTICAL_TOTAL_PARTS,
+            width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_BACKGROUND_LIMIT * height.toFloat() / VERTICAL_TOTAL_PARTS
+        )
+        contourLines[3] = Line(
+            width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_BACKGROUND_LIMIT * height.toFloat() / VERTICAL_TOTAL_PARTS,
+            width.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            height.toFloat() / VERTICAL_TOTAL_PARTS
+        )
+    }
+
+    private fun calculateHorizontalMarkLines() {
+        for (i in 0 until NUMBER_OF_MARKS) {
+            marksLines.add(
+                Line(
+                    calculateLargeMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_LARGE_MARK_X1 * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateLargeMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_LARGE_MARK_X2 * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+                )
+            )
+        }
+        for (i in 0 until NUMBER_OF_MARKS) {
+            marksLines.add(
+                Line(
+                    calculateLargeMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_LARGE_MARK_X1 * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateLargeMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_LARGE_MARK_X2 * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+                )
+            )
+        }
+        for (i in 1..NUMBER_OF_MARKS) {
+            marksLines.add(
+                Line(
+                    calculateEvenSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_SMALL_MARK_X1 * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateEvenSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_SMALL_MARK_X2 * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+                )
+            )
+        }
+
+        for (i in 1..NUMBER_OF_MARKS) {
+            marksLines.add(
+                Line(
+                    calculateEvenSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_SMALL_MARK_X1 * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateEvenSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_SMALL_MARK_X2 * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+                )
+            )
+        }
+
+        for (i in 1..NUMBER_OF_MARKS) {
+            marksLines.add(
+                Line(
+                    calculateOddSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_SMALL_MARK_X1 * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateOddSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    LEFT_SMALL_MARK_X2 * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+                )
+            )
+        }
+
+        for (i in 1..NUMBER_OF_MARKS) {
+            marksLines.add(
+                Line(
+                    calculateOddSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_SMALL_MARK_X1 * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+                    calculateOddSmallMarkOffset(i) * width.toFloat() / VERTICAL_TOTAL_PARTS,
+                    RIGHT_SMALL_MARK_X2 * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+                )
+            )
+        }
+
+        contourLines[0] = Line(
+            width.toFloat() / VERTICAL_TOTAL_PARTS,
+            height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_BACKGROUND_LIMIT * width.toFloat() / VERTICAL_TOTAL_PARTS,
+            height.toFloat() / HORIZONTAL_TOTAL_PARTS
+        )
+        contourLines[1] = Line(
+            VERTICAL_BACKGROUND_LIMIT * width.toFloat() / VERTICAL_TOTAL_PARTS,
+            height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            VERTICAL_BACKGROUND_LIMIT * width.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+        )
+        contourLines[2] = Line(
+            VERTICAL_BACKGROUND_LIMIT * width.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            width.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * height.toFloat() / HORIZONTAL_TOTAL_PARTS
+        )
+        contourLines[3] = Line(
+            width.toFloat() / VERTICAL_TOTAL_PARTS,
+            HORIZONTAL_END_PART * height.toFloat() / HORIZONTAL_TOTAL_PARTS,
+            width.toFloat() / VERTICAL_TOTAL_PARTS,
+            height.toFloat() / HORIZONTAL_TOTAL_PARTS
+        )
+    }
 
     private fun calculateFont(){
-        if (orientation == 0) {
-            fontPaint.textSize = height / 42f
+        if (orientation == VERTICAL_ORIENTATION) {
+            fontPaint.textSize = height / VERTICAL_FONT_PROPORTION
             for (i in labels.indices)
-                textPositions[i] = Pair(9.5f * width / 11, (1f + 2f * i) * height / 22)
+                textPositions[i] = calculateVerticalFontPos(i)
         } else {
-            fontPaint.textSize = height / 21f
+            fontPaint.textSize = height / HORIZONTAL_FONT_PROPORTION
             for (i in labels.indices)
-                textPositions[i] = Pair((0.75f + 2f * i) * width / 22, 10f * height / 11)
+                textPositions[i] = calculateHorizontalFontPos(i)
         }
     }
 
+    // TODO Magic numbers
+    private fun calculateVerticalFontPos(i: Int): Pair<Float, Float> =
+        Pair(9.5f * width / 11, (1f + 2f * i) * height / 22)
+
+    // TODO Magic numbers
+    private fun calculateHorizontalFontPos(i: Int): Pair<Float, Float> =
+        Pair((0.75f + 2f * i) * width / 22, 10f * height / 11)
+
     private fun recalculateLineWidth() {
-        if (orientation == 0) {
-            primaryLineWidth = height / 107.5f
-            secondaryLineWidth = height / 215.0f
+        if (orientation == VERTICAL_ORIENTATION) {
+            primaryLineWidth = height / VERTICAL_PRIMARY_LINE_PROPORTION
+            secondaryLineWidth = height / VERTICAL_SECONDARY_LINE_PROPORTION
         } else {
-            primaryLineWidth = height / 53.75f
-            secondaryLineWidth = height / 107.5f
+            primaryLineWidth = height / HORIZONTAL_PRIMARY_LINE_PROPORTION
+            secondaryLineWidth = height / HORIZONTAL_SECONDARY_LINE_PROPORTION
         }
         reloadPaints()
     }
